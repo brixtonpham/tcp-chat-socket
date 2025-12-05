@@ -1,0 +1,6 @@
+bin/
+data/*.dat
+logs/*.log
+*.o
+*.out
+.DS_Store
