@@ -24,7 +24,7 @@ client: $(CLIENT_SRC) | dirs
 
 
 clean:
-	rm -f bin/server bin/client data/*.dat
+	rm -f bin/server bin/client data/*.dat logs/*.log
 
 # Ensure the output directory exists. Order-only dependency prevents
 # rebuilding when the directory's timestamp changes.
