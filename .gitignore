@@ -1,4 +1,6 @@
 bin/
+data/
+logs/
 data/*.dat
 logs/*.log
 *.o

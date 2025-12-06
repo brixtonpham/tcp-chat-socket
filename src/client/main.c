@@ -15,7 +15,7 @@ typedef struct {
     int running;
 } ChatClient;
 
-ChatClient g_client;
+extern ChatClient g_client;
 
 /**
  * Signal handler for graceful shutdown

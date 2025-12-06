@@ -1,61 +1,88 @@
-================================================================================
-              TEST 05: KỊCH BẢN ĐẦY ĐỦ - TRẢI NGHIỆM HOÀN CHỈNH
-================================================================================
+# TEST 05: KỊCH BẢN ĐẦY ĐỦ - TRẢI NGHIỆM HOÀN CHÍNH
 
-Mục đích: Test toàn bộ chức năng trong một kịch bản thực tế
+Test toàn bộ chức năng trong một kịch bản thực tế
 
-CHUẨN BỊ: 
-- Chạy server: make clean && make && ./bin/server
-- Mở 3 terminal client: ./bin/client (x3)
+> Run these commands from the repository root (where you ran `git clone` or `git pull`).
+> Example: `cd /path/to/tcp-chat-socket`
 
-================================================================================
-PHẦN 1: ĐĂNG KÝ TÀI KHOẢN (5 phút)
-================================================================================
+---
+
+## CHUẨN BỊ:
+
+- Chạy server: `make clean && make && ./bin/server`
+- Mở 3 terminal client: `./bin/client` (x3)
+
+---
+
+## PHẦN 1: ĐĂNG KÝ TÀI KHOẢN (5 phút)
 
 ### Terminal 1:
+```
 help
 register alice password123 alice@email.com
+```
 
 ### Terminal 2:
+```
 register bob password456 bob@email.com
+```
 
 ### Terminal 3:
+```
 register charlie pass789 charlie@email.com
+```
 
-================================================================================
-PHẦN 2: ĐĂNG NHẬP (2 phút)
-================================================================================
+---
+
+## PHẦN 2: ĐĂNG NHẬP (2 phút)
 
 ### Terminal 1:
+```
 login alice password123
+```
 
 ### Terminal 2:
+```
 login bob password456
+```
 
 ### Terminal 3:
+```
 login charlie pass789
+```
 
-================================================================================
-PHẦN 3: HỆ THỐNG KẾT BẠN (5 phút)
-================================================================================
+---
+
+## PHẦN 3: HỆ THỐNG KẾT BẠN (5 phút)
 
 ### Terminal 1 (Alice) - Gửi lời mời kết bạn cho Bob và Charlie:
+```
 friend add bob
 friend add charlie
+```
 
 ### Terminal 2 (Bob) - Quan sát thông báo, sau đó chấp nhận Alice:
+```
 friend accept 1
+```
 
 ### Terminal 3 (Charlie) - Chấp nhận lời mời từ Alice:
+```
 friend accept 1
+```
 
 ### Terminal 2 (Bob) - Gửi lời mời kết bạn cho Charlie:
+```
 friend add charlie
+```
 
 ### Terminal 3 (Charlie) - Chấp nhận Bob:
+```
 friend accept 2
+```
 
 ### Kiểm tra danh sách bạn bè (tất cả terminal):
+```
 # Terminal 1:
 friend list
 
@@ -64,97 +91,145 @@ friend list
 
 # Terminal 3:
 friend list
+```
 
-================================================================================
-PHẦN 4: NHẮN TIN TRỰC TIẾP (5 phút)
-================================================================================
+---
+
+## PHẦN 4: NHẮN TIN TRỰC TIẾP (5 phút)
 
 ### Terminal 1 (Alice) - Gửi tin cho Bob (ID=2):
+```
 msg 2 Chào Bob! Đây là Alice. Bạn có khỏe không?
+```
 
 ### Terminal 2 (Bob) - Trả lời Alice (ID=1):
+```
 msg 1 Chào Alice! Mình khỏe. Cảm ơn bạn!
+```
 
 ### Terminal 1 (Alice) - Gửi tin cho Charlie (ID=3):
+```
 msg 3 Hi Charlie! Welcome to the chat!
+```
 
 ### Terminal 3 (Charlie) - Trả lời Alice:
+```
 msg 1 Thanks Alice! Glad to be here.
+```
 
 ### Terminal 2 (Bob) - Gửi tin cho Charlie:
+```
 msg 3 Yo Charlie! Bob here.
+```
 
 ### Terminal 3 (Charlie) - Trả lời Bob:
+```
 msg 2 Hey Bob! Nice to meet you.
+```
 
-================================================================================
-PHẦN 5: TẠO VÀ QUẢN LÝ NHÓM (10 phút)
-================================================================================
+---
+
+## PHẦN 5: TẠO VÀ QUẢN LÝ NHÓM (10 phút)
 
 ### Terminal 1 (Alice) - Tạo nhóm study group:
+```
 group create StudyGroup Nhóm học Network Programming - HUST 2025
+```
 
 ### Terminal 1 (Alice) - Mời Bob và Charlie vào nhóm (Group ID = 1):
+```
 group invite 1 2
 group invite 1 3
+```
 
 ### Terminal 2 (Bob) - Tham gia nhóm:
+```
 group join 1
+```
 
 ### Terminal 3 (Charlie) - Tham gia nhóm:
+```
 group join 1
+```
 
 ### Terminal 1 (Alice) - Gửi tin nhắn chào mừng:
+```
 group msg 1 Chào mừng mọi người đến với StudyGroup! 🎉
+```
 
 ### Terminal 2 (Bob) - Gửi tin nhắn nhóm:
+```
 group msg 1 Cảm ơn Alice đã tạo nhóm!
+```
 
 ### Terminal 3 (Charlie) - Gửi tin nhắn nhóm:
+```
 group msg 1 Excited to be here!
+```
 
 ### Terminal 1 (Alice) - Thảo luận:
+```
 group msg 1 Hôm nay chúng ta sẽ học về TCP Socket Programming.
 group msg 1 Ai có câu hỏi gì không?
+```
 
 ### Terminal 2 (Bob):
+```
 group msg 1 Em có câu hỏi về select() function!
+```
 
 ### Terminal 3 (Charlie):
+```
 group msg 1 Mình muốn hỏi về message framing.
+```
 
-================================================================================
-PHẦN 6: TEST OFFLINE MESSAGES (5 phút)
-================================================================================
+---
+
+## PHẦN 6: TEST OFFLINE MESSAGES (5 phút)
 
 ### Terminal 3 (Charlie) - Đăng xuất:
+```
 logout
+```
 
 ### Terminal 1 (Alice) - Gửi tin nhắn khi Charlie offline:
+```
 msg 3 Charlie ơi, bạn đang offline. Tin nhắn này sẽ chờ bạn!
+```
 
 ### Terminal 2 (Bob) - Gửi tin nhắn cho Charlie:
+```
 msg 3 Hey Charlie, đây là tin nhắn offline từ Bob.
+```
 
 ### Terminal 3 - Đăng nhập lại Charlie:
+```
 login charlie pass789
+```
 
 # Charlie sẽ nhận được tất cả tin nhắn offline!
 
-================================================================================
-PHẦN 7: TEST NHIỀU NHÓM (5 phút)
-================================================================================
+---
+
+## PHẦN 7: TEST NHIỀU NHÓM (5 phút)
 
 ### Terminal 2 (Bob) - Tạo nhóm mới:
+```
 group create GameNight Nhóm chơi game cuối tuần
+```
 
 ### Terminal 2 (Bob) - Mời Alice (Group ID có thể là 2):
+```
 group invite 2 1
+```
 
 ### Terminal 1 (Alice) - Tham gia:
+```
 group join 2
+```
 
 ### Gửi tin nhắn ở cả 2 nhóm:
+```
 # Terminal 1 (Alice):
 group msg 1 Tin nhắn trong StudyGroup
 group msg 2 Tin nhắn trong GameNight
@@ -162,71 +237,98 @@ group msg 2 Tin nhắn trong GameNight
 # Terminal 2 (Bob):
 group msg 1 Bob trong StudyGroup
 group msg 2 Bob trong GameNight
+```
 
-================================================================================
-PHẦN 8: TEST XÓA THÀNH VIÊN KHỎI NHÓM (3 phút)
-================================================================================
+---
+
+## PHẦN 8: TEST XÓA THÀNH VIÊN KHỎI NHÓM (3 phút)
 
 ### Terminal 1 (Alice - Admin) - Xóa Charlie (ID=3) khỏi StudyGroup (ID=1):
+```
 group remove 1 3
+```
 
 # Charlie sẽ nhận thông báo bị xóa
 
 ### Kiểm tra: Charlie gửi tin sau khi bị xóa:
+```
 # Terminal 3 (Charlie):
 group msg 1 Test sau khi bị kick
+```
 
 ### Kiểm tra lỗi: Bob (không phải admin) cố xóa Alice:
+```
 # Terminal 2 (Bob):
 group remove 1 1
+```
 
-================================================================================
-PHẦN 9: TEST RỜI NHÓM VÀ XÓA BẠN (3 phút)
-================================================================================
+---
+
+## PHẦN 9: TEST RỜI NHÓM VÀ XÓA BẠN (3 phút)
 
 ### Terminal 3 (Charlie) - Rời nhóm StudyGroup:
+```
 group leave 1
+```
 
 ### Kiểm tra: Charlie gửi tin vào nhóm sau khi rời:
+```
 group msg 1 Test sau khi rời nhóm
+```
 
 ### Terminal 1 (Alice) - Xóa Charlie khỏi danh sách bạn:
+```
 friend remove 3
+```
 
 ### Kiểm tra: Alice gửi tin cho Charlie sau khi xóa bạn:
+```
 msg 3 Test sau khi xóa bạn
+```
 
-================================================================================
-PHẦN 10: TEST TRẠNG THÁI ONLINE/OFFLINE (3 phút)
-================================================================================
+---
+
+## PHẦN 10: TEST TRẠNG THÁI ONLINE/OFFLINE (3 phút)
 
 ### Terminal 2 (Bob) - Xem danh sách bạn:
+```
 friend list
+```
 
 ### Terminal 3 (Charlie) - Đăng xuất:
+```
 logout
+```
 
 ### Terminal 2 (Bob) - Xem lại danh sách bạn (Charlie sẽ offline):
+```
 friend list
+```
 
 ### Terminal 1 (Alice) - Đăng xuất:
+```
 logout
+```
 
 ### Terminal 2 (Bob) - Xem danh sách (cả Alice và Charlie offline):
+```
 friend list
+```
 
-================================================================================
-PHẦN 11: KẾT THÚC
-================================================================================
+---
+
+## PHẦN 11: KẾT THÚC
 
 ### Đăng xuất tất cả:
+```
 # Terminal còn lại:
 logout
 quit
+```
 
-================================================================================
-TÓM TẮT CÁC TÍNH NĂNG ĐÃ TEST:
-================================================================================
+---
+
+### TÓM TẮT CÁC TÍNH NĂNG ĐÃ TEST:
 
 ✅ 1. Xử lý truyền dòng (Stream handling) - Internal
 ✅ 2. Cơ chế I/O socket (select) - Internal  
@@ -245,5 +347,3 @@ TÓM TẮT CÁC TÍNH NĂNG ĐÃ TEST:
 ✅ 15. Nhắn tin nhóm
 ✅ 16. Tin nhắn offline
 ✅ 17. Ghi log hoạt động - Server-side
-
-================================================================================

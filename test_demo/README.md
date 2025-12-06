@@ -12,12 +12,12 @@ Hướng dẫn test trải nghiệm ứng dụng Chat TCP Socket.
 
 | File | Mô tả |
 |------|-------|
-| `01_basic_auth.txt` | Test đăng ký và đăng nhập |
-| `02_friend_system.txt` | Test hệ thống kết bạn |
-| `03_direct_messaging.txt` | Test nhắn tin trực tiếp |
-| `04_group_chat.txt` | Test nhóm chat |
-| `05_full_scenario.txt` | Kịch bản test đầy đủ với 3 user |
-| `commands_reference.txt` | Tham khảo tất cả lệnh |
+| `01_basic_auth.md` | Test đăng ký và đăng nhập |
+| `02_friend_system.md` | Test hệ thống kết bạn |
+| `03_direct_messaging.md` | Test nhắn tin trực tiếp |
+| `04_group_chat.md` | Test nhóm chat |
+| `05_full_scenario.md` | Kịch bản test đầy đủ với 3 user |
+| `commands_reference.md` | Tham khảo tất cả lệnh |
 
 ## Lưu ý
 
