@@ -1,6 +1,8 @@
-# TCP Chat Application in C
+# TCP Chat Application
 
-A complete TCP-based chat application implementing all network programming concepts from the course. This project demonstrates socket programming, I/O multiplexing with `select()`, message framing, and client-server architecture in C.
+A complete TCP-based chat application with a modern web interface, implementing all network programming concepts from the course. This project demonstrates socket programming, I/O multiplexing with `select()`, message framing, and client-server architecture in C, plus a contemporary React web UI with real-time protocol visualization.
+
+**Latest Update**: The web client now features a redesigned UI with a **Server Logs Panel** - an educational tool that displays all protocol messages in real-time, making network programming concepts transparent and learnable.
 
 ## Features
 
@@ -24,15 +26,53 @@ A complete TCP-based chat application implementing all network programming conce
 16. **Offline Messages** - Queue messages for offline users
 17. **Activity Logging** - Comprehensive server-side logging
 
+### ✨ Web Client Features (Modern UI)
+
+The application includes a modern React-based web client with:
+
+- **Server Logs Panel** - Real-time visualization of all protocol messages (the key educational feature)
+  - Color-coded by category (Authentication, Friends, Messaging, Groups, Status, Errors, System)
+  - Request/response pairing with latency metrics
+  - Advanced filtering and full-text search
+  - Export capabilities (JSON and TXT formats)
+  - Pause/resume functionality
+
+- **4-Panel Desktop Layout** - Intuitive organization
+  - Header (64px) - Connection status, theme toggle, user menu, logs toggle
+  - Navigation Sidebar (280px) - Friends, Groups, Online Users tabs
+  - Chat Area (flexible) - Message list and input
+  - Server Logs Panel (400px, collapsible) - Real-time protocol logs
+
+- **Dark Mode by Default** - Modern, eye-friendly interface
+- **Responsive Design** - Tablet and mobile support
+- **Real-time Messaging** - Instant WebSocket communication
+- **Friend & Group Management** - Full UI for all features
+- **Theme Toggle** - Light/Dark mode with persistent preference
+
+See [Web Client Guide](/web-client/README.md) and [Server Logs Documentation](/web-client/docs/SERVER_LOGS_FEATURE.md) for details.
+
 ## Architecture
 
 ### Technology Stack
 
+**Backend (TCP Server)**:
 - **Language**: C (C99 standard)
 - **I/O Model**: I/O Multiplexing with `select()`
 - **Protocol**: Custom binary protocol with length-prefixed framing
 - **Threading**: POSIX threads for client receive handler
 - **Byte Order**: Network byte order (big-endian) for protocol headers
+
+**WebSocket Bridge**:
+- **Language**: TypeScript
+- **Runtime**: Node.js 18+
+- **Purpose**: Translates between WebSocket (JSON) and TCP (binary) protocols
+
+**Web Client**:
+- **Framework**: React 19
+- **State Management**: Zustand
+- **Styling**: Tailwind CSS
+- **Build Tool**: Vite
+- **Protocol Visualization**: Real-time Server Logs Panel
 
 ### System Architecture
 

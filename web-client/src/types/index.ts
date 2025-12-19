@@ -14,6 +14,9 @@ export const MessageTypes = {
   MSG_FRIEND_ACCEPT: 'MSG_FRIEND_ACCEPT',
   MSG_FRIEND_ACCEPT_ACK: 'MSG_FRIEND_ACCEPT_ACK',
   MSG_FRIEND_REJECT: 'MSG_FRIEND_REJECT',
+  MSG_FRIEND_REJECT_ACK: 'MSG_FRIEND_REJECT_ACK',
+  MSG_FRIEND_REMOVE: 'MSG_FRIEND_REMOVE',
+  MSG_FRIEND_REMOVE_ACK: 'MSG_FRIEND_REMOVE_ACK',
   MSG_FRIEND_LIST: 'MSG_FRIEND_LIST',
   MSG_FRIEND_LIST_RSP: 'MSG_FRIEND_LIST_RSP',
   MSG_FRIEND_NOTIFY: 'MSG_FRIEND_NOTIFY',
@@ -22,10 +25,19 @@ export const MessageTypes = {
   // Chat
   MSG_CHAT_SEND: 'MSG_CHAT_SEND',
   MSG_CHAT_DELIVER: 'MSG_CHAT_DELIVER',
+  MSG_CHAT_ACK: 'MSG_CHAT_ACK',
 
   // Groups
   MSG_GROUP_CREATE: 'MSG_GROUP_CREATE',
   MSG_GROUP_CREATE_ACK: 'MSG_GROUP_CREATE_ACK',
+  MSG_GROUP_INVITE: 'MSG_GROUP_INVITE',
+  MSG_GROUP_INVITE_ACK: 'MSG_GROUP_INVITE_ACK',
+  MSG_GROUP_JOIN: 'MSG_GROUP_JOIN',
+  MSG_GROUP_JOIN_ACK: 'MSG_GROUP_JOIN_ACK',
+  MSG_GROUP_LEAVE: 'MSG_GROUP_LEAVE',
+  MSG_GROUP_LEAVE_ACK: 'MSG_GROUP_LEAVE_ACK',
+  MSG_GROUP_REMOVE_USER: 'MSG_GROUP_REMOVE_USER',
+  MSG_GROUP_REMOVE_ACK: 'MSG_GROUP_REMOVE_ACK',
   MSG_GROUP_MSG: 'MSG_GROUP_MSG',
   MSG_GROUP_MSG_DELIVER: 'MSG_GROUP_MSG_DELIVER',
   MSG_GROUP_LIST: 'MSG_GROUP_LIST',
@@ -63,6 +75,13 @@ export interface FriendRequest {
   status: 'pending' | 'accepted' | 'rejected';
 }
 
+export interface OutgoingFriendRequest {
+  requestId: string;
+  toUsername: string;
+  timestamp: string;
+  status: 'pending';
+}
+
 // Message Types
 export interface Message {
   messageId: string;
@@ -82,6 +101,8 @@ export interface GroupMessage extends Omit<Message, 'recipientId'> {
 export interface Group {
   groupId: number;
   groupName: string;
+  description?: string;
+  role?: string; // 'admin' or 'member'
   creatorId: number;
   members: GroupMember[];
   createdAt: string;
@@ -138,7 +159,7 @@ export interface FriendRequestAckPayload {
 export interface FriendNotifyPayload {
   fromUserId: number;
   fromUsername: string;
-  requestId: number;
+  message: string;
 }
 
 export interface FriendListRspPayload {
@@ -169,7 +190,7 @@ export interface ChatDeliverPayload {
 // Group Payloads
 export interface GroupCreatePayload {
   groupName: string;
-  memberIds: number[];
+  description?: string;
 }
 
 export interface GroupCreateAckPayload {
@@ -184,7 +205,8 @@ export interface GroupMsgPayload {
 }
 
 export interface GroupMsgDeliverPayload {
-  groupId: number;
+  groupId: number; // Derived from groupName in Web UI
+  groupName: string; // Sent by C server
   messageId: string;
   senderId: number;
   senderUsername: string;

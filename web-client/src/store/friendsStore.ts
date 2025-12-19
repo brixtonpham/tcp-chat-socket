@@ -1,9 +1,10 @@
 import { create } from 'zustand';
-import type { Friend, FriendRequest } from '../types';
+import type { Friend, FriendRequest, OutgoingFriendRequest } from '../types';
 
 interface FriendsState {
   friends: Friend[];
   pendingRequests: FriendRequest[];
+  outgoingRequests: OutgoingFriendRequest[];
   setFriends: (friends: Friend[]) => void;
   addFriend: (friend: Friend) => void;
   removeFriend: (userId: number) => void;
@@ -11,12 +12,16 @@ interface FriendsState {
   setPendingRequests: (requests: FriendRequest[]) => void;
   addPendingRequest: (request: FriendRequest) => void;
   removePendingRequest: (requestId: number) => void;
+  setOutgoingRequests: (requests: OutgoingFriendRequest[]) => void;
+  addOutgoingRequest: (request: OutgoingFriendRequest) => void;
+  removeOutgoingRequest: (requestId: string) => void;
   clearAll: () => void;
 }
 
 export const useFriendsStore = create<FriendsState>((set) => ({
   friends: [],
   pendingRequests: [],
+  outgoingRequests: [],
 
   setFriends: (friends) =>
     set({
@@ -57,9 +62,27 @@ export const useFriendsStore = create<FriendsState>((set) => ({
       ),
     })),
 
+  setOutgoingRequests: (requests) =>
+    set({
+      outgoingRequests: requests,
+    }),
+
+  addOutgoingRequest: (request) =>
+    set((state) => ({
+      outgoingRequests: [...state.outgoingRequests, request],
+    })),
+
+  removeOutgoingRequest: (requestId) =>
+    set((state) => ({
+      outgoingRequests: state.outgoingRequests.filter(
+        (r) => r.requestId !== requestId
+      ),
+    })),
+
   clearAll: () =>
     set({
       friends: [],
       pendingRequests: [],
+      outgoingRequests: [],
     }),
 }));

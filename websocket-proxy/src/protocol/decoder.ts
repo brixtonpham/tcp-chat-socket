@@ -206,127 +206,126 @@ function parsePipeSeparatedFields(payload: Buffer): string[] {
 }
 
 /**
- * Helper: Parse null-terminated string
- */
-function parseNullTerminatedString(payload: Buffer): string {
-  const nullIndex = payload.indexOf(0x00);
-  if (nullIndex === -1) {
-    return payload.toString('utf8');
-  }
-  return payload.subarray(0, nullIndex).toString('utf8');
-}
-
-/**
- * Helper: Parse success status (first byte: 0 = fail, 1 = success)
- */
-function parseSuccessStatus(payload: Buffer): boolean {
-  if (payload.length === 0) return false;
-  return payload[0] === 1;
-}
-
-/**
- * MSG_REGISTER_ACK: success|user_id|message
+ * MSG_REGISTER_ACK: OK|user_id|message or FAIL|0|message
  */
 function decodeRegisterAck(payload: Buffer): WebSocketMessage {
   const fields = parsePipeSeparatedFields(payload);
-  const success = fields[0] === '1';
+  const success = fields[0] === 'OK' || fields[0] === '1';
 
   return {
     type: 'MSG_REGISTER_ACK',
-    success,
-    userId: success ? parseInt(fields[1]) : undefined,
-    message: fields[2] || (success ? 'Registration successful' : 'Registration failed')
+    data: {
+      success,
+      userId: success ? parseInt(fields[1]) : undefined,
+      message: fields[2] || (success ? 'Registration successful' : 'Registration failed')
+    }
   };
 }
 
 /**
- * MSG_LOGIN_ACK: success|user_id|token|username
+ * MSG_LOGIN_ACK: OK|token|user_id|message or FAIL||message
  */
 function decodeLoginAck(payload: Buffer): WebSocketMessage {
   const fields = parsePipeSeparatedFields(payload);
-  const success = fields[0] === '1';
+  const success = fields[0] === 'OK' || fields[0] === '1';
 
   return {
     type: 'MSG_LOGIN_ACK',
-    success,
-    userId: success ? parseInt(fields[1]) : undefined,
-    token: success ? fields[2] : undefined,
-    username: success ? fields[3] : undefined,
-    message: success ? 'Login successful' : fields[1] || 'Login failed'
+    data: {
+      success,
+      userId: success ? parseInt(fields[2]) : undefined,
+      token: success ? fields[1] : undefined,
+      username: undefined, // Will be injected by tcpClient
+      message: fields[3] || (success ? 'Login successful' : fields[1] || 'Login failed')
+    }
   };
 }
 
 /**
- * MSG_LOGOUT_ACK: success
+ * MSG_LOGOUT_ACK: OK|Goodbye or FAIL|message
  */
 function decodeLogoutAck(payload: Buffer): WebSocketMessage {
-  const success = parseSuccessStatus(payload);
+  const fields = parsePipeSeparatedFields(payload);
+  const success = fields[0] === 'OK';
 
   return {
     type: 'MSG_LOGOUT_ACK',
-    success,
-    message: success ? 'Logout successful' : 'Logout failed'
+    data: {
+      success,
+      message: fields[1] || (success ? 'Logout successful' : 'Logout failed')
+    }
   };
 }
 
 /**
- * MSG_FRIEND_REQUEST_ACK: success|message
+ * MSG_FRIEND_REQUEST_ACK: OK|message or FAIL|message
  */
 function decodeFriendRequestAck(payload: Buffer): WebSocketMessage {
   const fields = parsePipeSeparatedFields(payload);
-  const success = fields[0] === '1';
+  const success = fields[0] === 'OK';
 
   return {
     type: 'MSG_FRIEND_REQUEST_ACK',
-    success,
-    message: fields[1] || (success ? 'Friend request sent' : 'Friend request failed')
+    data: {
+      success,
+      message: fields[1] || (success ? 'Friend request sent' : 'Friend request failed')
+    }
   };
 }
 
 /**
- * MSG_FRIEND_ACCEPT_ACK: success|message
+ * MSG_FRIEND_ACCEPT_ACK: OK|message or FAIL|message
  */
 function decodeFriendAcceptAck(payload: Buffer): WebSocketMessage {
   const fields = parsePipeSeparatedFields(payload);
-  const success = fields[0] === '1';
+  const success = fields[0] === 'OK';
 
   return {
     type: 'MSG_FRIEND_ACCEPT_ACK',
-    success,
-    message: fields[1] || (success ? 'Friend request accepted' : 'Accept failed')
+    data: {
+      success,
+      message: fields[1] || (success ? 'Friend request accepted' : 'Accept failed')
+    }
   };
 }
 
 /**
- * MSG_FRIEND_REJECT_ACK: success|message
+ * MSG_FRIEND_REJECT_ACK: OK|message or FAIL|message
  */
 function decodeFriendRejectAck(payload: Buffer): WebSocketMessage {
   const fields = parsePipeSeparatedFields(payload);
-  const success = fields[0] === '1';
+  const success = fields[0] === 'OK';
 
   return {
     type: 'MSG_FRIEND_REJECT_ACK',
-    success,
-    message: fields[1] || (success ? 'Friend request rejected' : 'Reject failed')
+    data: {
+      success,
+      message: fields[1] || (success ? 'Friend request rejected' : 'Reject failed')
+    }
   };
 }
 
 /**
- * MSG_FRIEND_REMOVE_ACK: success|message
+ * MSG_FRIEND_REMOVE_ACK: OK|message or FAIL|message
  */
 function decodeFriendRemoveAck(payload: Buffer): WebSocketMessage {
   const fields = parsePipeSeparatedFields(payload);
-  const success = fields[0] === '1';
+  const success = fields[0] === 'OK';
 
   return {
     type: 'MSG_FRIEND_REMOVE_ACK',
-    success,
-    message: fields[1] || (success ? 'Friend removed' : 'Remove failed')
+    data: {
+      success,
+      message: fields[1] || (success ? 'Friend removed' : 'Remove failed')
+    }
   };
 }
 
 /**
- * MSG_FRIEND_LIST_RSP: friend1_id|friend1_name|friend1_status,friend2_id|...
+ * MSG_FRIEND_LIST_RSP: count|friend1_id|friend1_name|friend1_status,friend2_id|friend2_name|friend2_status,...
+ *
+ * C Server sends ONLY accepted friends in this response.
+ * Pending requests are sent via MSG_FRIEND_NOTIFY when they arrive.
  */
 function decodeFriendListResponse(payload: Buffer): WebSocketMessage {
   const text = payload.toString('utf8').replace(/\0/g, '');
@@ -334,12 +333,31 @@ function decodeFriendListResponse(payload: Buffer): WebSocketMessage {
   if (!text || text.length === 0) {
     return {
       type: 'MSG_FRIEND_LIST_RSP',
-      success: true,
-      friends: []
+      data: {
+        success: true,
+        friends: [],
+        pendingRequests: []
+      }
     };
   }
 
-  const friendEntries = text.split(',');
+  const parts = text.split('|');
+  const count = parseInt(parts[0]);
+
+  if (count === 0 || isNaN(count)) {
+    return {
+      type: 'MSG_FRIEND_LIST_RSP',
+      data: {
+        success: true,
+        friends: [],
+        pendingRequests: []
+      }
+    };
+  }
+
+  // Remaining parts after count: friend1_id|friend1_name|friend1_status,friend2_id|...
+  const friendData = parts.slice(1).join('|');
+  const friendEntries = friendData.split(',').filter(e => e.trim().length > 0);
   const friends = friendEntries.map(entry => {
     const [id, username, status] = entry.split('|');
     return {
@@ -351,21 +369,27 @@ function decodeFriendListResponse(payload: Buffer): WebSocketMessage {
 
   return {
     type: 'MSG_FRIEND_LIST_RSP',
-    success: true,
-    friends
+    data: {
+      success: true,
+      friends,
+      pendingRequests: [] // C server doesn't include pending requests in this response
+    }
   };
 }
 
 /**
- * MSG_FRIEND_NOTIFY: username (new friend request notification)
+ * MSG_FRIEND_NOTIFY: userId|username|message (new friend request notification)
  */
 function decodeFriendNotify(payload: Buffer): WebSocketMessage {
-  const username = parseNullTerminatedString(payload);
+  const fields = parsePipeSeparatedFields(payload);
 
   return {
     type: 'MSG_FRIEND_NOTIFY',
-    username,
-    message: `Friend request from ${username}`
+    data: {
+      fromUserId: parseInt(fields[0]),
+      fromUsername: fields[1],
+      message: fields[2] || `Friend request from ${fields[1]}`
+    }
   };
 }
 
@@ -377,130 +401,156 @@ function decodeStatusNotify(payload: Buffer): WebSocketMessage {
 
   return {
     type: 'MSG_STATUS_NOTIFY',
-    userId: parseInt(fields[0]),
-    username: fields[1],
-    status: fields[2]
+    data: {
+      userId: parseInt(fields[0]),
+      username: fields[1],
+      status: fields[2]
+    }
   };
 }
 
 /**
- * MSG_CHAT_DELIVER: sender_id|sender_name|content|timestamp
+ * MSG_CHAT_DELIVER: message_id|sender_name|sender_id|content|timestamp
+ * C server format from server.c:403-408
  */
 function decodeChatDeliver(payload: Buffer): WebSocketMessage {
   const fields = parsePipeSeparatedFields(payload);
 
   return {
     type: 'MSG_CHAT_DELIVER',
-    senderId: parseInt(fields[0]),
-    senderName: fields[1],
-    content: fields[2],
-    timestamp: fields[3] || new Date().toISOString()
+    data: {
+      messageId: fields[0],
+      senderUsername: fields[1],
+      senderId: parseInt(fields[2]),
+      content: fields[3],
+      timestamp: fields[4] || new Date().toISOString()
+    }
   };
 }
 
 /**
- * MSG_CHAT_ACK: success|message_id
+ * MSG_CHAT_ACK: OK|message_id or FAIL|message
  */
 function decodeChatAck(payload: Buffer): WebSocketMessage {
   const fields = parsePipeSeparatedFields(payload);
-  const success = fields[0] === '1';
+  const success = fields[0] === 'OK';
 
   return {
     type: 'MSG_CHAT_ACK',
-    success,
-    messageId: success ? fields[1] : undefined
+    data: {
+      success,
+      messageId: success ? fields[1] : undefined
+    }
   };
 }
 
 /**
- * MSG_GROUP_CREATE_ACK: success|group_id|message
+ * MSG_GROUP_CREATE_ACK: OK|groupId|groupName or FAIL|message
  */
 function decodeGroupCreateAck(payload: Buffer): WebSocketMessage {
   const fields = parsePipeSeparatedFields(payload);
-  const success = fields[0] === '1';
+  const success = fields[0] === 'OK';
 
   return {
     type: 'MSG_GROUP_CREATE_ACK',
-    success,
-    groupId: success ? parseInt(fields[1]) : undefined,
-    message: fields[2] || (success ? 'Group created' : 'Group creation failed')
+    data: {
+      success,
+      groupId: success ? parseInt(fields[1]) : undefined,
+      groupName: success ? fields[2] : undefined,
+      message: success ? 'Group created' : (fields[1] || 'Group creation failed')
+    }
   };
 }
 
 /**
- * MSG_GROUP_INVITE_ACK: success|message
+ * MSG_GROUP_INVITE_ACK: OK|message or FAIL|message
  */
 function decodeGroupInviteAck(payload: Buffer): WebSocketMessage {
   const fields = parsePipeSeparatedFields(payload);
-  const success = fields[0] === '1';
+  const success = fields[0] === 'OK';
 
   return {
     type: 'MSG_GROUP_INVITE_ACK',
-    success,
-    message: fields[1] || (success ? 'User invited' : 'Invite failed')
+    data: {
+      success,
+      message: fields[1] || (success ? 'User invited' : 'Invite failed')
+    }
   };
 }
 
 /**
- * MSG_GROUP_JOIN_ACK: success|message
+ * MSG_GROUP_JOIN_ACK: OK|message or FAIL|message
  */
 function decodeGroupJoinAck(payload: Buffer): WebSocketMessage {
   const fields = parsePipeSeparatedFields(payload);
-  const success = fields[0] === '1';
+  const success = fields[0] === 'OK';
 
   return {
     type: 'MSG_GROUP_JOIN_ACK',
-    success,
-    message: fields[1] || (success ? 'Joined group' : 'Join failed')
+    data: {
+      success,
+      message: fields[1] || (success ? 'Joined group' : 'Join failed')
+    }
   };
 }
 
 /**
- * MSG_GROUP_LEAVE_ACK: success|message
+ * MSG_GROUP_LEAVE_ACK: OK|message or FAIL|message
  */
 function decodeGroupLeaveAck(payload: Buffer): WebSocketMessage {
   const fields = parsePipeSeparatedFields(payload);
-  const success = fields[0] === '1';
+  const success = fields[0] === 'OK';
 
   return {
     type: 'MSG_GROUP_LEAVE_ACK',
-    success,
-    message: fields[1] || (success ? 'Left group' : 'Leave failed')
+    data: {
+      success,
+      message: fields[1] || (success ? 'Left group' : 'Leave failed')
+    }
   };
 }
 
 /**
- * MSG_GROUP_REMOVE_ACK: success|message
+ * MSG_GROUP_REMOVE_ACK: OK|message or FAIL|message
  */
 function decodeGroupRemoveAck(payload: Buffer): WebSocketMessage {
   const fields = parsePipeSeparatedFields(payload);
-  const success = fields[0] === '1';
+  const success = fields[0] === 'OK';
 
   return {
     type: 'MSG_GROUP_REMOVE_ACK',
-    success,
-    message: fields[1] || (success ? 'User removed' : 'Remove failed')
+    data: {
+      success,
+      message: fields[1] || (success ? 'User removed' : 'Remove failed')
+    }
   };
 }
 
 /**
- * MSG_GROUP_MSG_DELIVER: group_id|sender_id|sender_name|content|timestamp
+ * MSG_GROUP_MSG_DELIVER: messageId|groupName|senderId|senderUsername|content|timestamp
+ * C Server format from handlers.c:776-782
+ * Note: C server sends groupName, not groupId. Web UI must derive groupId from groupName.
  */
 function decodeGroupMessageDeliver(payload: Buffer): WebSocketMessage {
   const fields = parsePipeSeparatedFields(payload);
 
   return {
     type: 'MSG_GROUP_MSG_DELIVER',
-    groupId: parseInt(fields[0]),
-    senderId: parseInt(fields[1]),
-    senderName: fields[2],
-    content: fields[3],
-    timestamp: fields[4] || new Date().toISOString()
+    data: {
+      messageId: fields[0],
+      groupName: fields[1],
+      groupId: 0, // Will be derived from groupName in Web UI
+      senderId: parseInt(fields[2]),
+      senderUsername: fields[3],
+      content: fields[4],
+      timestamp: fields[5] || new Date().toISOString()
+    }
   };
 }
 
 /**
- * MSG_GROUP_LIST_RSP: group1_id|group1_name,group2_id|group2_name,...
+ * MSG_GROUP_LIST_RSP: count|group1_id|name|desc|role,group2_id|name|desc|role,...
+ * C Server format from handlers.c:465-478
  */
 function decodeGroupListResponse(payload: Buffer): WebSocketMessage {
   const text = payload.toString('utf8').replace(/\0/g, '');
@@ -508,24 +558,48 @@ function decodeGroupListResponse(payload: Buffer): WebSocketMessage {
   if (!text || text.length === 0) {
     return {
       type: 'MSG_GROUP_LIST_RSP',
-      success: true,
-      groups: []
+      data: {
+        success: true,
+        groups: []
+      }
     };
   }
 
-  const groupEntries = text.split(',');
+  const parts = text.split('|');
+  const count = parseInt(parts[0]);
+
+  if (count === 0 || isNaN(count)) {
+    return {
+      type: 'MSG_GROUP_LIST_RSP',
+      data: {
+        success: true,
+        groups: []
+      }
+    };
+  }
+
+  // Remaining parts after count: group1_id|name|desc|role,group2_id|...
+  const groupData = parts.slice(1).join('|');
+  const groupEntries = groupData.split(',').filter(e => e.trim().length > 0);
   const groups = groupEntries.map(entry => {
-    const [id, name] = entry.split('|');
+    const [id, name, description, role] = entry.split('|');
     return {
       groupId: parseInt(id),
-      groupName: name
+      groupName: name,
+      description: description || '',
+      role: role || 'member',
+      creatorId: 0,
+      members: [],
+      createdAt: new Date().toISOString()
     };
   });
 
   return {
     type: 'MSG_GROUP_LIST_RSP',
-    success: true,
-    groups
+    data: {
+      success: true,
+      groups
+    }
   };
 }
 
@@ -537,9 +611,11 @@ function decodeError(payload: Buffer): WebSocketMessage {
 
   return {
     type: 'MSG_ERROR',
-    success: false,
-    errorCode: fields[0],
-    error: fields[1] || 'Unknown error'
+    data: {
+      success: false,
+      code: fields[0],
+      message: fields[1] || 'Unknown error'
+    }
   };
 }
 
@@ -549,6 +625,8 @@ function decodeError(payload: Buffer): WebSocketMessage {
 function decodeHeartbeatAck(_payload: Buffer): WebSocketMessage {
   return {
     type: 'MSG_HEARTBEAT_ACK',
-    success: true
+    data: {
+      success: true
+    }
   };
 }

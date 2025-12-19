@@ -430,6 +430,57 @@ int handle_chat_send(ChatServer *server, int client_idx, const char *payload) {
 }
 
 /**
+ * Handle group list request
+ * Returns list of groups user is member of
+ */
+int handle_group_list(ChatServer *server, int client_idx) {
+    int user_id = server->clients[client_idx].user_id;
+
+    if (user_id == 0) {
+        send_response(server, client_idx, MSG_ERROR, "Not logged in");
+        return -1;
+    }
+
+    // Get user's groups
+    int group_ids[100];
+    int group_count = get_user_groups(user_id, group_ids, 100);
+
+    // Build response
+    char response[BUFFER_SIZE] = "";
+    int count = 0;
+
+    for (int i = 0; i < group_count; i++) {
+        Group *group = get_group_by_id(group_ids[i]);
+        if (group) {
+            char entry[400];
+            char role[20];
+
+            // Determine user's role in the group
+            if (is_group_admin(group->group_id, user_id)) {
+                strncpy(role, "admin", sizeof(role) - 1);
+            } else {
+                strncpy(role, "member", sizeof(role) - 1);
+            }
+
+            snprintf(entry, sizeof(entry), "%d|%s|%s|%s,",
+                    group->group_id,
+                    group->name,
+                    group->description,
+                    role);
+            strcat(response, entry);
+            count++;
+        }
+    }
+
+    // Send response
+    char final_response[BUFFER_SIZE];
+    snprintf(final_response, sizeof(final_response), "%d|%s", count, response);
+    send_response(server, client_idx, MSG_GROUP_LIST_RSP, final_response);
+
+    return 0;
+}
+
+/**
  * Handle group create
  * Payload format: group_name|description
  */

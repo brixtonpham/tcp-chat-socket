@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useMessagesStore } from '../store/messagesStore';
 import { useFriendsStore } from '../store/friendsStore';
 import { useAuthStore } from '../store/authStore';
@@ -19,10 +19,13 @@ export const useChat = () => {
   const {
     friends,
     pendingRequests,
+    outgoingRequests,
     setFriends,
     setPendingRequests,
     addPendingRequest,
     updateFriendStatus,
+    addOutgoingRequest,
+    removeOutgoingRequest,
   } = useFriendsStore();
   const { user } = useAuthStore();
   const { send, onMessage } = useWebSocket();
@@ -60,15 +63,17 @@ export const useChat = () => {
 
         case MessageTypes.MSG_FRIEND_NOTIFY: {
           const data = message.data as FriendNotifyPayload;
+          // C server sends: userId|username|message
+          // Use fromUserId as requestId for local tracking
           addPendingRequest({
-            requestId: data.requestId,
+            requestId: data.fromUserId,
             fromUserId: data.fromUserId,
             fromUsername: data.fromUsername,
             toUserId: user?.userId || 0,
             timestamp: new Date().toISOString(),
             status: 'pending',
           });
-          toast.success(`Friend request from ${data.fromUsername}`);
+          toast.success(data.message || `Friend request from ${data.fromUsername}`);
           break;
         }
 
@@ -85,6 +90,7 @@ export const useChat = () => {
           const data = message.data as FriendRequestAckPayload;
           if (data.success) {
             toast.success('Friend request sent!');
+            // Note: We add to outgoingRequests in sendFriendRequest callback
           } else {
             toast.error(data.message || 'Failed to send friend request');
           }
@@ -95,10 +101,42 @@ export const useChat = () => {
           const data = message.data as FriendRequestAckPayload;
           if (data.success) {
             toast.success('Friend request accepted!');
-            // Refresh friend list
+            // Refresh friend list and clear outgoing request if it was our request
             send(MessageTypes.MSG_FRIEND_LIST, {});
           } else {
             toast.error(data.message || 'Failed to accept friend request');
+          }
+          break;
+        }
+
+        case MessageTypes.MSG_FRIEND_REJECT_ACK: {
+          const data = message.data as FriendRequestAckPayload;
+          if (data.success) {
+            toast.success('Friend request rejected');
+            // Refresh friend list to remove rejected request
+            send(MessageTypes.MSG_FRIEND_LIST, {});
+          } else {
+            toast.error(data.message || 'Failed to reject friend request');
+          }
+          break;
+        }
+
+        case MessageTypes.MSG_FRIEND_REMOVE_ACK: {
+          const data = message.data as FriendRequestAckPayload;
+          if (data.success) {
+            toast.success('Friend removed');
+            // Refresh friend list
+            send(MessageTypes.MSG_FRIEND_LIST, {});
+          } else {
+            toast.error(data.message || 'Failed to remove friend');
+          }
+          break;
+        }
+
+        case MessageTypes.MSG_CHAT_ACK: {
+          const data = message.data as any;
+          if (!data.success) {
+            toast.error('Failed to send message');
           }
           break;
         }
@@ -114,11 +152,10 @@ export const useChat = () => {
     addPendingRequest,
     updateFriendStatus,
     user,
-    onMessage,
     send,
-  ]);
+  ]); // Removed onMessage - it's now memoized and stable
 
-  const sendMessage = (recipientId: number, content: string) => {
+  const sendMessage = useCallback((recipientId: number, content: string) => {
     if (!user) {
       toast.error('Not authenticated');
       return;
@@ -141,33 +178,65 @@ export const useChat = () => {
       timestamp: new Date().toISOString(),
       status: 'sent',
     });
-  };
+  }, [user, send, addMessage]);
 
-  const requestFriendList = () => {
+  const requestFriendList = useCallback(() => {
     send(MessageTypes.MSG_FRIEND_LIST, {});
-  };
+  }, [send]);
 
-  const sendFriendRequest = (targetUsername: string) => {
+  const sendFriendRequest = useCallback((targetUsername: string) => {
     send(MessageTypes.MSG_FRIEND_REQUEST, { targetUsername });
-  };
+    // Optimistically add to outgoing requests
+    addOutgoingRequest({
+      requestId: `temp-${Date.now()}`,
+      toUsername: targetUsername,
+      timestamp: new Date().toISOString(),
+      status: 'pending',
+    });
+  }, [send, addOutgoingRequest]);
 
-  const acceptFriendRequest = (requestId: number) => {
-    send(MessageTypes.MSG_FRIEND_ACCEPT, { requestId });
-  };
+  const cancelFriendRequest = useCallback((requestId: string) => {
+    // Remove from local outgoing requests
+    removeOutgoingRequest(requestId);
+    toast.success('Friend request cancelled');
+  }, [removeOutgoingRequest]);
 
-  const rejectFriendRequest = (requestId: number) => {
-    send(MessageTypes.MSG_FRIEND_REJECT, { requestId });
-  };
+  const acceptFriendRequest = useCallback((requestId: number) => {
+    // Find the request to get the requester's userId
+    const request = pendingRequests.find(r => r.requestId === requestId);
+    if (!request) {
+      toast.error('Friend request not found');
+      return;
+    }
+    send(MessageTypes.MSG_FRIEND_ACCEPT, { userId: request.fromUserId });
+  }, [pendingRequests, send]);
+
+  const rejectFriendRequest = useCallback((requestId: number) => {
+    // Find the request to get the requester's userId
+    const request = pendingRequests.find(r => r.requestId === requestId);
+    if (!request) {
+      toast.error('Friend request not found');
+      return;
+    }
+    send(MessageTypes.MSG_FRIEND_REJECT, { userId: request.fromUserId });
+  }, [pendingRequests, send]);
+
+  const removeFriend = useCallback((friendId: number) => {
+    send(MessageTypes.MSG_FRIEND_REMOVE, { userId: friendId });
+  }, [send]);
 
   return {
     friends,
     pendingRequests,
+    outgoingRequests,
     activeConversation,
     setActiveConversation,
     sendMessage,
     requestFriendList,
     sendFriendRequest,
+    cancelFriendRequest,
     acceptFriendRequest,
     rejectFriendRequest,
+    removeFriend,
   };
 };

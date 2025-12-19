@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useGroupsStore } from '../store/groupsStore';
 import { useAuthStore } from '../store/authStore';
 import { useWebSocket } from './useWebSocket';
@@ -41,19 +41,65 @@ export const useGroups = () => {
 
         case MessageTypes.MSG_GROUP_MSG_DELIVER: {
           const data = message.data as GroupMsgDeliverPayload;
-          addGroupMessage(data.groupId, {
+
+          // Derive groupId from groupName (C server sends groupName, not groupId)
+          const group = groups.find((g) => g.groupName === data.groupName);
+          const derivedGroupId = group?.groupId || data.groupId;
+
+          addGroupMessage(derivedGroupId, {
             messageId: data.messageId,
             senderId: data.senderId,
             senderUsername: data.senderUsername,
-            groupId: data.groupId,
+            groupId: derivedGroupId,
             content: data.content,
             timestamp: data.timestamp,
           });
 
           // Show notification if not in active group
-          if (activeGroup !== data.groupId) {
-            const group = groups.find((g) => g.groupId === data.groupId);
-            toast.success(`New message in ${group?.groupName || 'group'} from ${data.senderUsername}`);
+          if (activeGroup !== derivedGroupId) {
+            toast.success(`New message in ${data.groupName} from ${data.senderUsername}`);
+          }
+          break;
+        }
+
+        case MessageTypes.MSG_GROUP_INVITE_ACK: {
+          const data = message.data as any;
+          if (data.success) {
+            toast.success('User invited to group!');
+          } else {
+            toast.error(data.message || 'Failed to invite user');
+          }
+          break;
+        }
+
+        case MessageTypes.MSG_GROUP_JOIN_ACK: {
+          const data = message.data as any;
+          if (data.success) {
+            toast.success('Joined group successfully!');
+            send(MessageTypes.MSG_GROUP_LIST, {});
+          } else {
+            toast.error(data.message || 'Failed to join group');
+          }
+          break;
+        }
+
+        case MessageTypes.MSG_GROUP_LEAVE_ACK: {
+          const data = message.data as any;
+          if (data.success) {
+            toast.success('Left group');
+            send(MessageTypes.MSG_GROUP_LIST, {});
+          } else {
+            toast.error(data.message || 'Failed to leave group');
+          }
+          break;
+        }
+
+        case MessageTypes.MSG_GROUP_REMOVE_ACK: {
+          const data = message.data as any;
+          if (data.success) {
+            toast.success('User removed from group');
+          } else {
+            toast.error(data.message || 'Failed to remove user');
           }
           break;
         }
@@ -61,13 +107,13 @@ export const useGroups = () => {
     });
 
     return unsubscribe;
-  }, [addGroupMessage, activeGroup, groups, setGroups, onMessage, send]);
+  }, [addGroupMessage, activeGroup, groups, setGroups, send]); // Removed onMessage - it's now memoized and stable
 
-  const requestGroupList = () => {
+  const requestGroupList = useCallback(() => {
     send(MessageTypes.MSG_GROUP_LIST, {});
-  };
+  }, [send]);
 
-  const createGroup = (groupName: string, memberIds: number[]) => {
+  const createGroup = useCallback((groupName: string, description?: string) => {
     if (!user) {
       toast.error('Not authenticated');
       return;
@@ -75,13 +121,13 @@ export const useGroups = () => {
 
     const payload: GroupCreatePayload = {
       groupName,
-      memberIds,
+      description: description || '',
     };
 
     send(MessageTypes.MSG_GROUP_CREATE, payload);
-  };
+  }, [user, send]);
 
-  const sendGroupMessage = (groupId: number, content: string) => {
+  const sendGroupMessage = useCallback((groupId: number, content: string) => {
     if (!user) {
       toast.error('Not authenticated');
       return;
@@ -103,7 +149,34 @@ export const useGroups = () => {
       content,
       timestamp: new Date().toISOString(),
     });
-  };
+  }, [user, send, addGroupMessage]);
+
+  const inviteToGroup = useCallback((groupId: number, userId: number) => {
+    if (!user) {
+      toast.error('Not authenticated');
+      return;
+    }
+
+    send(MessageTypes.MSG_GROUP_INVITE, { groupId, userId });
+  }, [user, send]);
+
+  const removeGroupMember = useCallback((groupId: number, userId: number) => {
+    if (!user) {
+      toast.error('Not authenticated');
+      return;
+    }
+
+    send(MessageTypes.MSG_GROUP_REMOVE_USER, { groupId, userId });
+  }, [user, send]);
+
+  const leaveGroup = useCallback((groupId: number) => {
+    if (!user) {
+      toast.error('Not authenticated');
+      return;
+    }
+
+    send(MessageTypes.MSG_GROUP_LEAVE, { groupId });
+  }, [user, send]);
 
   return {
     groups,
@@ -113,5 +186,8 @@ export const useGroups = () => {
     requestGroupList,
     createGroup,
     sendGroupMessage,
+    inviteToGroup,
+    removeGroupMember,
+    leaveGroup,
   };
 };

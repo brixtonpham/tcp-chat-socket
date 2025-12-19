@@ -1,15 +1,31 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MessageInput } from '../Chat/MessageInput';
 import { useGroupsStore } from '../../store/groupsStore';
 import { useGroups } from '../../hooks/useGroups';
 import { useAuthStore } from '../../store/authStore';
+import { GroupSettings } from './GroupSettings';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import type { GroupMessage } from '../../types';
+import { Settings, LogOut } from 'lucide-react';
 
 export const GroupChat: React.FC = () => {
   const { activeGroup, groups, groupMessages } = useGroupsStore();
-  const { sendGroupMessage } = useGroups();
+  const { sendGroupMessage, leaveGroup } = useGroups();
   const { user } = useAuthStore();
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   React.useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -51,72 +67,136 @@ export const GroupChat: React.FC = () => {
     });
   };
 
+  const handleLeaveGroup = () => {
+    setShowLeaveConfirm(true);
+  };
+
+  const confirmLeave = () => {
+    if (activeGroup) {
+      leaveGroup(activeGroup);
+      setShowLeaveConfirm(false);
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col bg-white dark:bg-gray-900">
       {/* Group Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold">
-            {group?.groupName.charAt(0).toUpperCase()}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10">
+              <AvatarFallback className="bg-gradient-to-br from-purple-400 to-pink-500 text-white font-semibold">
+                {group?.groupName?.charAt(0).toUpperCase() || 'G'}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h2 className="font-semibold text-gray-900 dark:text-white">
+                {group?.groupName || 'Unknown Group'}
+              </h2>
+              <Badge variant="secondary" className="text-xs">
+                {group?.members.length || 0} members
+              </Badge>
+            </div>
           </div>
-          <div>
-            <h2 className="font-semibold text-gray-900 dark:text-white">
-              {group?.groupName || 'Unknown Group'}
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {group?.members.length || 0} members
-            </p>
+
+          {/* Settings and Leave Actions */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowSettings(true)}
+              title="Group Settings"
+            >
+              <Settings className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLeaveGroup}
+              className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+              title="Leave Group"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
           </div>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <ScrollArea className="flex-1 p-4">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
             <p>No messages yet. Start the conversation!</p>
           </div>
         ) : (
-          messages.map((message: GroupMessage, index: number) => {
-            const isOwnMessage = message.senderId === user?.userId;
+          <div className="space-y-4">
+            {messages.map((message: GroupMessage, index: number) => {
+              const isOwnMessage = message.senderId === user?.userId;
 
-            return (
-              <div
-                key={`${message.messageId}-${index}`}
-                className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-              >
+              return (
                 <div
-                  className={`max-w-[70%] ${
-                    isOwnMessage
-                      ? 'bg-purple-500 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'
-                  } rounded-lg px-4 py-2 shadow-sm`}
+                  key={`${message.messageId}-${index}`}
+                  className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                 >
-                  {!isOwnMessage && (
-                    <p className="text-xs font-semibold mb-1 opacity-75">
-                      {message.senderUsername}
-                    </p>
-                  )}
-                  <p className="break-words">{message.content}</p>
-                  <p
-                    className={`text-xs mt-1 ${
+                  <div
+                    className={`max-w-[70%] ${
                       isOwnMessage
-                        ? 'text-purple-100'
-                        : 'text-gray-500 dark:text-gray-400'
-                    }`}
+                        ? 'bg-purple-500 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'
+                    } rounded-lg px-4 py-2 shadow-sm`}
                   >
-                    {formatTime(message.timestamp)}
-                  </p>
+                    {!isOwnMessage && (
+                      <p className="text-xs font-semibold mb-1 opacity-75">
+                        {message.senderUsername}
+                      </p>
+                    )}
+                    <p className="break-words">{message.content}</p>
+                    <p
+                      className={`text-xs mt-1 ${
+                        isOwnMessage
+                          ? 'text-purple-100'
+                          : 'text-gray-500 dark:text-gray-400'
+                      }`}
+                    >
+                      {formatTime(message.timestamp)}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            );
-          })
+              );
+            })}
+            <div ref={messagesEndRef} />
+          </div>
         )}
-        <div ref={messagesEndRef} />
-      </div>
+      </ScrollArea>
 
       {/* Input */}
       <MessageInput onSend={(content) => sendGroupMessage(activeGroup, content)} />
+
+      {/* Group Settings Modal */}
+      {showSettings && group && (
+        <GroupSettings group={group} onClose={() => setShowSettings(false)} />
+      )}
+
+      {/* Leave Confirmation Dialog */}
+      <Dialog open={showLeaveConfirm} onOpenChange={setShowLeaveConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Leave Group</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to leave <strong>{group?.groupName}</strong>? You will no
+              longer receive messages from this group.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowLeaveConfirm(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmLeave}>
+              Leave
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

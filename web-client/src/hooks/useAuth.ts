@@ -52,7 +52,7 @@ export const useAuth = () => {
     });
 
     return unsubscribe;
-  }, [login, logoutStore, onMessage]);
+  }, [login, logoutStore]); // Removed onMessage - it's now memoized and stable
 
   const handleLogin = (username: string, password: string) => {
     if (!connected) {

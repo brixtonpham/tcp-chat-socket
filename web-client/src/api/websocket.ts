@@ -2,6 +2,31 @@ import type { WSMessage, MessageType } from '../types';
 
 export type MessageHandler = (message: WSMessage) => void;
 
+// Store reference to logs store (will be set during initialization)
+let logsStoreRef: any = null;
+
+export function setLogsStore(store: any) {
+  logsStoreRef = store;
+}
+
+// Get WebSocket URL from environment or derive from current origin
+const getWebSocketUrl = (): string => {
+  // If VITE_WS_URL is set, use it
+  if (import.meta.env.VITE_WS_URL) {
+    return import.meta.env.VITE_WS_URL;
+  }
+
+  // For production: derive WebSocket URL from current origin
+  // This allows the same build to work on any domain (ngrok, etc.)
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${protocol}//${window.location.host}`;
+  }
+
+  // Default for local development
+  return 'ws://localhost:3000';
+};
+
 class WebSocketClient {
   private ws: WebSocket | null = null;
   private url: string;
@@ -10,8 +35,9 @@ class WebSocketClient {
   private messageHandlers: Set<MessageHandler> = new Set();
   private connectionHandlers: Set<(connected: boolean) => void> = new Set();
   private isIntentionallyClosed: boolean = false;
+  private pendingRequests: Map<string, number> = new Map();
 
-  constructor(url: string = 'ws://localhost:3000') {
+  constructor(url: string = getWebSocketUrl()) {
     this.url = url;
   }
 
@@ -31,6 +57,16 @@ class WebSocketClient {
         console.log('WebSocket connected');
         this.notifyConnectionHandlers(true);
 
+        // Log connection event
+        if (logsStoreRef) {
+          logsStoreRef.addLog({
+            type: 'MSG_CONNECT' as MessageType,
+            category: 'system',
+            direction: 'response',
+            payload: { status: 'connected', url: this.url },
+          });
+        }
+
         // Clear reconnect timer if exists
         if (this.reconnectTimer) {
           clearTimeout(this.reconnectTimer);
@@ -42,6 +78,27 @@ class WebSocketClient {
         try {
           const message: WSMessage = JSON.parse(event.data);
           console.log('Received message:', message);
+
+          // Log incoming message
+          if (logsStoreRef) {
+            const requestKey = this.getRequestKey(message.type);
+            const latency = this.pendingRequests.has(requestKey)
+              ? Date.now() - this.pendingRequests.get(requestKey)!
+              : undefined;
+
+            if (latency !== undefined) {
+              this.pendingRequests.delete(requestKey);
+            }
+
+            logsStoreRef.addLog({
+              type: message.type,
+              direction: 'response',
+              payload: message.data,
+              latency,
+              category: 'system', // Will be auto-determined by store
+            });
+          }
+
           this.notifyMessageHandlers(message);
         } catch (error) {
           console.error('Failed to parse message:', error);
@@ -55,6 +112,16 @@ class WebSocketClient {
       this.ws.onclose = () => {
         console.log('WebSocket disconnected');
         this.notifyConnectionHandlers(false);
+
+        // Log disconnection event
+        if (logsStoreRef) {
+          logsStoreRef.addLog({
+            type: 'MSG_DISCONNECT' as MessageType,
+            category: 'system',
+            direction: 'response',
+            payload: { status: 'disconnected' },
+          });
+        }
 
         // Auto-reconnect if not intentionally closed
         if (!this.isIntentionallyClosed) {
@@ -92,7 +159,27 @@ class WebSocketClient {
 
     const message: WSMessage<T> = { type, data };
     console.log('Sending message:', message);
+
+    // Log outgoing message
+    if (logsStoreRef) {
+      logsStoreRef.addLog({
+        type: message.type,
+        direction: 'request',
+        payload: message.data,
+        category: 'system', // Will be auto-determined by store
+      });
+
+      // Track request timestamp for latency calculation
+      const requestKey = this.getRequestKey(type);
+      this.pendingRequests.set(requestKey, Date.now());
+    }
+
     this.ws.send(JSON.stringify(message));
+  }
+
+  private getRequestKey(type: MessageType): string {
+    // Remove _ACK, _RSP suffixes to match request with response
+    return type.replace(/_ACK$|_RSP$|_DELIVER$|_NOTIFY$/, '');
   }
 
   onMessage(handler: MessageHandler): () => void {

@@ -246,6 +246,9 @@ void handle_client_data(ChatServer *server, int client_index) {
         case MSG_GROUP_MSG:
             handle_group_message(server, client_index, buffer);
             break;
+        case MSG_GROUP_LIST:
+            handle_group_list(server, client_index);
+            break;
         case MSG_HEARTBEAT:
             send_response(server, client_index, MSG_HEARTBEAT_ACK, "");
             break;

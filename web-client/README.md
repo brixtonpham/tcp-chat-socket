@@ -7,6 +7,7 @@ A modern, real-time chat application built with React, TypeScript, and WebSocket
 - **Real-time Messaging**: Instant message delivery via WebSocket
 - **Friend System**: Add friends, accept/reject requests, view online status
 - **Group Chat**: Create and participate in group conversations
+- **Server Logs Panel**: Educational feature showing all protocol messages (NEW!)
 - **Dark/Light Theme**: Toggle between themes with persistent preference
 - **Responsive Design**: Modern UI built with Tailwind CSS
 - **Type Safety**: Full TypeScript implementation
@@ -35,6 +36,7 @@ web-client/
 │   │   ├── Chat/        # Messaging
 │   │   ├── Groups/      # Group chat
 │   │   ├── Layout/      # Header/Sidebar
+│   │   ├── Logs/        # Server Logs Panel (NEW!)
 │   │   └── Common/      # Shared components
 │   ├── hooks/           # Custom React hooks
 │   ├── store/           # Zustand stores
@@ -42,6 +44,10 @@ web-client/
 │   ├── utils/           # Utility functions
 │   ├── App.tsx          # Main app component
 │   └── main.tsx         # Entry point
+├── docs/                # Documentation (NEW!)
+│   ├── UI_REDESIGN_PLAN.md
+│   ├── SERVER_LOGS_FEATURE.md
+│   └── IMPLEMENTATION_SUMMARY.md
 ├── tailwind.config.js   # Tailwind configuration
 ├── vite.config.ts       # Vite configuration
 └── package.json         # Dependencies
@@ -109,6 +115,30 @@ The client communicates with the server using JSON messages with the following s
 Supported message types are defined in `/src/types/index.ts`.
 
 ## Features Guide
+
+### Server Logs Panel (Educational Feature)
+
+**What is it?**
+A real-time panel displaying all WebSocket protocol messages - perfect for learning network programming!
+
+**Features:**
+- Color-coded messages by category (Authentication, Friends, Messaging, Groups, Status, Errors, System)
+- Request/response latency metrics
+- Pause/resume log streaming
+- Filter by message category
+- Full-text search across logs
+- Export logs as JSON or TXT
+- Expandable log entries with JSON payload
+- Copy individual logs to clipboard
+
+**How to use:**
+1. Click the document icon in the header to toggle logs panel
+2. Click filter icon to show/hide message categories
+3. Use search box for full-text search
+4. Click pause button to freeze log stream
+5. Click export buttons to save logs
+
+**See `/docs/SERVER_LOGS_FEATURE.md` for detailed documentation.**
 
 ### Authentication
 
@@ -209,6 +239,12 @@ Make sure to configure the WebSocket URL for your production environment.
 - Safari: Latest 2 versions
 - Mobile browsers: iOS Safari, Chrome Android
 
+## Documentation
+
+- **Design Specification**: `/docs/UI_REDESIGN_PLAN.md`
+- **Server Logs Feature**: `/docs/SERVER_LOGS_FEATURE.md`
+- **Implementation Summary**: `/docs/IMPLEMENTATION_SUMMARY.md`
+
 ## License
 
 This project is part of the TCP Chat Application assignment.
@@ -216,3 +252,9 @@ This project is part of the TCP Chat Application assignment.
 ## Contributing
 
 This is an academic project. For questions or issues, please contact the development team.
+
+---
+
+**Version**: 1.0.0 (Redesigned UI with Server Logs Panel)
+**Last Updated**: 2025-12-19
+**Status**: Production Ready ✅

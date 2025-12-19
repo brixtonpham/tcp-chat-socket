@@ -1,5 +1,9 @@
 import React, { useEffect } from 'react';
 import { useGroups } from '../../hooks/useGroups';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 
 export const GroupList: React.FC = () => {
   const { groups, activeGroup, setActiveGroup, requestGroupList } = useGroups();
@@ -19,36 +23,45 @@ export const GroupList: React.FC = () => {
           No groups yet. Create a group to get started!
         </p>
       ) : (
-        <div className="space-y-1">
-          {groups.map((group) => (
-            <button
-              key={group.groupId}
-              onClick={() => setActiveGroup(group.groupId)}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                activeGroup === group.groupId
-                  ? 'bg-purple-500 text-white'
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
-              }`}
-            >
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold">
-                {group.groupName.charAt(0).toUpperCase()}
-              </div>
+        <ScrollArea className="h-auto max-h-[calc(100vh-300px)]">
+          <div className="space-y-1 px-1">
+            {groups.map((group) => (
+              <Card
+                key={group.groupId}
+                className={`cursor-pointer transition-colors ${
+                  activeGroup === group.groupId
+                    ? 'bg-purple-500 text-white border-purple-600'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+                onClick={() => setActiveGroup(group.groupId)}
+              >
+                <div className="flex items-center gap-3 p-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback className="bg-gradient-to-br from-purple-400 to-pink-500 text-white font-semibold">
+                      {group.groupName?.charAt(0).toUpperCase() || 'G'}
+                    </AvatarFallback>
+                  </Avatar>
 
-              <div className="flex-1 text-left">
-                <p className="font-medium">{group.groupName}</p>
-                <p
-                  className={`text-xs ${
-                    activeGroup === group.groupId
-                      ? 'text-purple-100'
-                      : 'text-gray-500 dark:text-gray-400'
-                  }`}
-                >
-                  {group.members.length} members
-                </p>
-              </div>
-            </button>
-          ))}
-        </div>
+                  <div className="flex-1 text-left min-w-0">
+                    <p className="font-medium truncate">{group.groupName}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge
+                        variant="secondary"
+                        className={`text-xs ${
+                          activeGroup === group.groupId
+                            ? 'bg-purple-600 text-purple-100'
+                            : ''
+                        }`}
+                      >
+                        {group.members?.length || 0} members
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </ScrollArea>
       )}
     </div>
   );

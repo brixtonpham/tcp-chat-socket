@@ -124,11 +124,12 @@ function writeNullTerminatedString(str: string): Buffer {
 }
 
 /**
- * Helper: Write pipe-separated fields
+ * Helper: Write pipe-separated fields with null terminator
  */
 function writePipeSeparatedFields(fields: string[]): Buffer {
   const content = fields.join('|');
-  return Buffer.from(content, 'utf8');
+  const buf = Buffer.from(content, 'utf8');
+  return Buffer.concat([buf, Buffer.from([0x00])]);
 }
 
 /**
@@ -139,17 +140,18 @@ function encodeEmpty(): Buffer {
 }
 
 /**
- * MSG_REGISTER: username|password
+ * MSG_REGISTER: username|password|email
  */
 function encodeRegister(data: Record<string, unknown>): Buffer {
   const username = String(data.username || '');
   const password = String(data.password || '');
+  const email = String(data.email || `${username}@example.com`);
 
   if (!username || !password) {
     throw new Error('Register requires username and password');
   }
 
-  return writePipeSeparatedFields([username, password]);
+  return writePipeSeparatedFields([username, password, email]);
 }
 
 /**
@@ -177,7 +179,7 @@ function encodeLogout(_data: Record<string, unknown>): Buffer {
  * MSG_FRIEND_REQUEST: username (target username)
  */
 function encodeFriendRequest(data: Record<string, unknown>): Buffer {
-  const username = String(data.username || '');
+  const username = String(data.username || data.targetUsername || '');
 
   if (!username) {
     throw new Error('Friend request requires target username');
@@ -187,42 +189,42 @@ function encodeFriendRequest(data: Record<string, unknown>): Buffer {
 }
 
 /**
- * MSG_FRIEND_ACCEPT: username (requester username)
+ * MSG_FRIEND_ACCEPT: userId (requester user ID)
  */
 function encodeFriendAccept(data: Record<string, unknown>): Buffer {
-  const username = String(data.username || '');
+  const userId = String(data.userId || data.requesterId || '');
 
-  if (!username) {
-    throw new Error('Friend accept requires requester username');
+  if (!userId) {
+    throw new Error('Friend accept requires requester userId');
   }
 
-  return writeNullTerminatedString(username);
+  return writeNullTerminatedString(userId);
 }
 
 /**
- * MSG_FRIEND_REJECT: username (requester username)
+ * MSG_FRIEND_REJECT: userId (requester user ID)
  */
 function encodeFriendReject(data: Record<string, unknown>): Buffer {
-  const username = String(data.username || '');
+  const userId = String(data.userId || data.requesterId || '');
 
-  if (!username) {
-    throw new Error('Friend reject requires requester username');
+  if (!userId) {
+    throw new Error('Friend reject requires requester userId');
   }
 
-  return writeNullTerminatedString(username);
+  return writeNullTerminatedString(userId);
 }
 
 /**
- * MSG_FRIEND_REMOVE: username (friend username)
+ * MSG_FRIEND_REMOVE: userId (friend user ID)
  */
 function encodeFriendRemove(data: Record<string, unknown>): Buffer {
-  const username = String(data.username || '');
+  const userId = String(data.userId || data.friendId || '');
 
-  if (!username) {
-    throw new Error('Friend remove requires friend username');
+  if (!userId) {
+    throw new Error('Friend remove requires friend userId');
   }
 
-  return writeNullTerminatedString(username);
+  return writeNullTerminatedString(userId);
 }
 
 /**
@@ -240,30 +242,31 @@ function encodeChatSend(data: Record<string, unknown>): Buffer {
 }
 
 /**
- * MSG_GROUP_CREATE: group_name
+ * MSG_GROUP_CREATE: group_name|description
  */
 function encodeGroupCreate(data: Record<string, unknown>): Buffer {
   const groupName = String(data.groupName || data.group_name || '');
+  const description = String(data.description || '');
 
   if (!groupName) {
     throw new Error('Group create requires group name');
   }
 
-  return writeNullTerminatedString(groupName);
+  return writePipeSeparatedFields([groupName, description]);
 }
 
 /**
- * MSG_GROUP_INVITE: group_id|username
+ * MSG_GROUP_INVITE: group_id|user_id
  */
 function encodeGroupInvite(data: Record<string, unknown>): Buffer {
   const groupId = String(data.groupId || data.group_id || '');
-  const username = String(data.username || '');
+  const userId = String(data.userId || data.user_id || '');
 
-  if (!groupId || !username) {
-    throw new Error('Group invite requires groupId and username');
+  if (!groupId || !userId) {
+    throw new Error('Group invite requires groupId and userId');
   }
 
-  return writePipeSeparatedFields([groupId, username]);
+  return writePipeSeparatedFields([groupId, userId]);
 }
 
 /**
@@ -293,17 +296,17 @@ function encodeGroupLeave(data: Record<string, unknown>): Buffer {
 }
 
 /**
- * MSG_GROUP_REMOVE_USER: group_id|username
+ * MSG_GROUP_REMOVE_USER: group_id|user_id
  */
 function encodeGroupRemoveUser(data: Record<string, unknown>): Buffer {
   const groupId = String(data.groupId || data.group_id || '');
-  const username = String(data.username || '');
+  const userId = String(data.userId || data.user_id || '');
 
-  if (!groupId || !username) {
-    throw new Error('Group remove user requires groupId and username');
+  if (!groupId || !userId) {
+    throw new Error('Group remove user requires groupId and userId');
   }
 
-  return writePipeSeparatedFields([groupId, username]);
+  return writePipeSeparatedFields([groupId, userId]);
 }
 
 /**

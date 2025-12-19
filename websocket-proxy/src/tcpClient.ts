@@ -34,6 +34,7 @@ export class TCPClient extends EventEmitter {
   private isConnected = false;
   private isReconnecting = false;
   private clientId: string;
+  private loginUsername: string | null = null;
 
   constructor(clientId: string) {
     super();
@@ -134,6 +135,12 @@ export class TCPClient extends EventEmitter {
     for (const binaryMessage of messages) {
       try {
         const jsonMessage = decodeMessage(binaryMessage);
+
+        // Add username to LOGIN_ACK if we have it stored
+        if (jsonMessage.type === 'MSG_LOGIN_ACK' && this.loginUsername && jsonMessage.data) {
+          (jsonMessage.data as any).username = this.loginUsername;
+        }
+
         logger.debug('Emitting decoded message', {
           clientId: this.clientId,
           type: jsonMessage.type
@@ -233,6 +240,11 @@ export class TCPClient extends EventEmitter {
     }
 
     try {
+      // Store username from login request for later use
+      if (message.type === 'MSG_LOGIN' && message.data) {
+        this.loginUsername = (message.data as any).username || null;
+      }
+
       const binaryData = encodeMessage(message);
 
       logger.debug('Sending TCP message', {

@@ -49,6 +49,7 @@ int handle_friend_remove(ChatServer *server, int client_idx, const char *payload
 int handle_friend_list(ChatServer *server, int client_idx);
 int handle_chat_send(ChatServer *server, int client_idx, const char *payload);
 int handle_group_create(ChatServer *server, int client_idx, const char *payload);
+int handle_group_list(ChatServer *server, int client_idx);
 int handle_group_invite(ChatServer *server, int client_idx, const char *payload);
 int handle_group_join(ChatServer *server, int client_idx, const char *payload);
 int handle_group_leave(ChatServer *server, int client_idx, const char *payload);

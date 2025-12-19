@@ -1,56 +1,137 @@
 import React from 'react';
 import { useChat } from '../../hooks/useChat';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Check, X, Clock } from 'lucide-react';
 
 export const FriendRequest: React.FC = () => {
-  const { pendingRequests, acceptFriendRequest, rejectFriendRequest } = useChat();
+  const { pendingRequests, outgoingRequests, acceptFriendRequest, rejectFriendRequest, cancelFriendRequest } = useChat();
 
-  if (pendingRequests.length === 0) {
+  if (pendingRequests.length === 0 && outgoingRequests.length === 0) {
     return null;
   }
 
   return (
-    <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-2">
-      <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase px-3">
-        Friend Requests ({pendingRequests.length})
-      </h3>
+    <div className="space-y-4">
+      <Separator />
 
-      <div className="space-y-2">
-        {pendingRequests.map((request) => (
-          <div
-            key={request.requestId}
-            className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 space-y-2"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
-                {request.fromUsername.charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {request.fromUsername}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Wants to be your friend
-                </p>
-              </div>
+      {pendingRequests.length > 0 && (
+        <Card className="border-0 shadow-none">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                Friend Requests
+              </CardTitle>
+              <Badge variant="default" className="text-xs">
+                {pendingRequests.length}
+              </Badge>
             </div>
+          </CardHeader>
 
-            <div className="flex gap-2">
-              <button
-                onClick={() => acceptFriendRequest(request.requestId)}
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm font-medium py-2 px-3 rounded transition-colors"
-              >
-                Accept
-              </button>
-              <button
-                onClick={() => rejectFriendRequest(request.requestId)}
-                className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2 px-3 rounded transition-colors"
-              >
-                Reject
-              </button>
+          <CardContent className="px-3">
+            <ScrollArea className="max-h-[300px]">
+              <div className="space-y-2">
+                {pendingRequests.map((request) => (
+                  <Card key={request.requestId} className="p-3">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="w-10 h-10">
+                          <AvatarFallback className="bg-gradient-to-br from-green-400 to-blue-500 text-white font-semibold">
+                            {request.fromUsername.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p className="font-medium">
+                            {request.fromUsername}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Wants to be your friend
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => acceptFriendRequest(request.requestId)}
+                          variant="default"
+                          size="sm"
+                          className="flex-1 bg-green-500 hover:bg-green-600"
+                        >
+                          <Check className="h-4 w-4 mr-1" />
+                          Accept
+                        </Button>
+                        <Button
+                          onClick={() => rejectFriendRequest(request.requestId)}
+                          variant="destructive"
+                          size="sm"
+                          className="flex-1"
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+
+      {outgoingRequests.length > 0 && (
+        <Card className="border-0 shadow-none">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                Sent Requests
+              </CardTitle>
+              <Badge variant="secondary" className="text-xs">
+                {outgoingRequests.length}
+              </Badge>
             </div>
-          </div>
-        ))}
-      </div>
+          </CardHeader>
+
+          <CardContent className="px-3">
+            <ScrollArea className="max-h-[300px]">
+              <div className="space-y-2">
+                {outgoingRequests.map((request) => (
+                  <Card key={request.requestId} className="p-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-10 h-10">
+                        <AvatarFallback className="bg-gradient-to-br from-gray-400 to-gray-500 text-white font-semibold">
+                          {request.toUsername.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="font-medium">
+                          {request.toUsername}
+                        </p>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3 animate-pulse" />
+                          Request pending...
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => cancelFriendRequest(request.requestId)}
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

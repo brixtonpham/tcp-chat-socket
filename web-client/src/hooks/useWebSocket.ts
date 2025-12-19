@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { wsClient } from '../api/websocket';
 import type { WSMessage, MessageType } from '../types';
 
@@ -10,19 +10,27 @@ export const useWebSocket = () => {
     return unsubscribe;
   }, []);
 
-  const send = <T,>(type: MessageType, data: T) => {
+  const send = useCallback(<T,>(type: MessageType, data: T) => {
     wsClient.send(type, data);
-  };
+  }, []);
 
-  const onMessage = (handler: (message: WSMessage) => void) => {
+  const onMessage = useCallback((handler: (message: WSMessage) => void) => {
     return wsClient.onMessage(handler);
-  };
+  }, []);
+
+  const connect = useCallback(() => {
+    wsClient.connect();
+  }, []);
+
+  const disconnect = useCallback(() => {
+    wsClient.disconnect();
+  }, []);
 
   return {
     connected,
     send,
     onMessage,
-    connect: () => wsClient.connect(),
-    disconnect: () => wsClient.disconnect(),
+    connect,
+    disconnect,
   };
 };

@@ -1,13 +1,31 @@
 /**
  * WebSocket server - bridges browser clients to C TCP server
+ * Also serves static files for the web client
  */
 
 import { WebSocketServer, WebSocket } from 'ws';
-import { IncomingMessage } from 'http';
+import { createServer, IncomingMessage, ServerResponse } from 'http';
+import { createReadStream, existsSync, statSync } from 'fs';
+import { join, extname } from 'path';
 import { logger } from './utils/logger';
 import { config } from './utils/config';
 import { TCPClient } from './tcpClient';
 import { WebSocketMessage } from './protocol/types';
+
+// MIME types for static files
+const MIME_TYPES: Record<string, string> = {
+  '.html': 'text/html',
+  '.js': 'application/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+};
 
 /**
  * Client connection info
@@ -24,8 +42,57 @@ interface ClientConnection {
  */
 export class ProxyServer {
   private wss: WebSocketServer | null = null;
+  private httpServer: ReturnType<typeof createServer> | null = null;
   private clients: Map<string, ClientConnection> = new Map();
   private pingInterval: NodeJS.Timeout | null = null;
+  private staticDir: string;
+
+  constructor() {
+    // Static files directory (web-client/dist)
+    this.staticDir = join(__dirname, '../../web-client/dist');
+  }
+
+  /**
+   * Serve static files
+   */
+  private serveStatic(req: IncomingMessage, res: ServerResponse): void {
+    let filePath = req.url || '/';
+
+    // Default to index.html for root or SPA routes
+    if (filePath === '/' || !filePath.includes('.')) {
+      filePath = '/index.html';
+    }
+
+    const fullPath = join(this.staticDir, filePath);
+
+    // Security: prevent directory traversal
+    if (!fullPath.startsWith(this.staticDir)) {
+      res.writeHead(403);
+      res.end('Forbidden');
+      return;
+    }
+
+    // Check if file exists
+    if (!existsSync(fullPath) || !statSync(fullPath).isFile()) {
+      // For SPA, serve index.html for unknown routes
+      const indexPath = join(this.staticDir, 'index.html');
+      if (existsSync(indexPath)) {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        createReadStream(indexPath).pipe(res);
+      } else {
+        res.writeHead(404);
+        res.end('Not Found - Run "npm run build" in web-client first');
+      }
+      return;
+    }
+
+    // Get MIME type
+    const ext = extname(fullPath).toLowerCase();
+    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+
+    res.writeHead(200, { 'Content-Type': contentType });
+    createReadStream(fullPath).pipe(res);
+  }
 
   /**
    * Start WebSocket server
@@ -36,9 +103,25 @@ export class ProxyServer {
       host: config.wsHost
     });
 
+    // Create HTTP server for static files
+    this.httpServer = createServer((req, res) => {
+      // Add CORS headers for development
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+      if (req.method === 'OPTIONS') {
+        res.writeHead(204);
+        res.end();
+        return;
+      }
+
+      this.serveStatic(req, res);
+    });
+
+    // Attach WebSocket server to HTTP server
     this.wss = new WebSocketServer({
-      host: config.wsHost,
-      port: config.wsPort,
+      server: this.httpServer,
       perMessageDeflate: {
         zlibDeflateOptions: {
           chunkSize: 1024,
@@ -62,6 +145,14 @@ export class ProxyServer {
 
     this.wss.on('error', (error: Error) => {
       logger.error('WebSocket server error', { error: error.message });
+    });
+
+    // Start HTTP server
+    this.httpServer.listen(config.wsPort, config.wsHost, () => {
+      logger.info('HTTP + WebSocket server started', {
+        port: config.wsPort,
+        host: config.wsHost
+      });
     });
 
     // Start ping interval for connection health check
@@ -94,16 +185,17 @@ export class ProxyServer {
     };
     this.clients.set(clientId, connection);
 
-    // Set up WebSocket event handlers
-    this.setupWebSocketHandlers(connection);
-
-    // Set up TCP event handlers
-    this.setupTCPHandlers(connection);
-
-    // Connect to TCP server
+    // Connect to TCP server FIRST, then set up handlers
     try {
       await tcpClient.connect();
       logger.info('TCP connection established for WebSocket client', { clientId });
+
+      // Set up WebSocket event handlers AFTER TCP connection is established
+      // This prevents race condition where client sends message before TCP is ready
+      this.setupWebSocketHandlers(connection);
+
+      // Set up TCP event handlers (for reconnection and message forwarding)
+      this.setupTCPHandlers(connection);
     } catch (error) {
       logger.error('Failed to connect to TCP server', {
         clientId,
@@ -195,17 +287,23 @@ export class ProxyServer {
       this.sendToClient(ws, message);
     });
 
-    // Handle TCP connection events
+    // Handle TCP reconnection events (not initial connect, which already happened)
+    let hasDisconnected = false;
+
     tcp.on('connected', () => {
-      logger.info('TCP reconnected', { clientId });
-      this.sendToClient(ws, {
-        type: 'MSG_ERROR',
-        success: true,
-        message: 'Reconnected to server'
-      });
+      // Only notify on REconnection, not initial connection
+      if (hasDisconnected) {
+        logger.info('TCP reconnected', { clientId });
+        this.sendToClient(ws, {
+          type: 'MSG_ERROR',
+          success: true,
+          message: 'Reconnected to server'
+        });
+      }
     });
 
     tcp.on('disconnected', () => {
+      hasDisconnected = true;
       logger.warn('TCP disconnected', { clientId });
       this.sendToClient(ws, {
         type: 'MSG_ERROR',
@@ -318,6 +416,13 @@ export class ProxyServer {
     if (this.wss) {
       this.wss.close(() => {
         logger.info('WebSocket server closed');
+      });
+    }
+
+    // Close HTTP server
+    if (this.httpServer) {
+      this.httpServer.close(() => {
+        logger.info('HTTP server closed');
       });
     }
   }

@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { ServerLogsPanel } from '../Logs/ServerLogsPanel';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 
 interface RegisterProps {
   onSwitchToLogin: () => void;
@@ -10,6 +15,7 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [email, setEmail] = useState('');
+  const [showLogs, setShowLogs] = useState(true);
   const { register, connected } = useAuth();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -26,123 +32,149 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 dark:from-gray-900 dark:to-gray-800">
-      <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-md animate-fade-in">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Create Account
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Join TCP Chat today
-          </p>
-        </div>
-
-        <div className="mb-6">
-          <div className="flex items-center justify-center gap-2">
-            <div
-              className={`w-2 h-2 rounded-full ${
-                connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
-              }`}
-            />
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              {connected ? 'Connected' : 'Disconnected'}
-            </span>
+    <div className="min-h-screen flex flex-col lg:flex-row bg-gradient-to-br from-blue-500 to-purple-600 dark:from-gray-900 dark:to-gray-800">
+      {/* Header - Mobile Only */}
+      <div className="lg:hidden bg-gray-900/50 backdrop-blur-sm border-b border-gray-700 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-bold text-white">TCP Chat - Network Programming</h1>
           </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label
-              htmlFor="username"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
-              Username
-            </label>
-            <input
-              type="text"
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              placeholder="Choose a username"
-              required
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              placeholder="your.email@example.com"
-              required
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              placeholder="Choose a strong password"
-              required
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="confirmPassword"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
-              Confirm Password
-            </label>
-            <input
-              type="password"
-              id="confirmPassword"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              placeholder="Confirm your password"
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={!connected}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
-          >
-            Create Account
-          </button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <p className="text-gray-600 dark:text-gray-400">
-            Already have an account?{' '}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+                }`}
+              />
+              <span className="text-xs text-gray-300">
+                {connected ? 'Connected' : 'Disconnected'}
+              </span>
+            </div>
             <button
-              onClick={onSwitchToLogin}
-              className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+              onClick={() => setShowLogs(!showLogs)}
+              className="lg:hidden px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded-md transition-colors"
             >
-              Sign In
+              {showLogs ? 'Hide' : 'Show'} Logs
             </button>
-          </p>
+          </div>
         </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex items-center justify-center p-4 lg:p-8">
+        <Card className="w-full max-w-md animate-fade-in">
+          <CardHeader className="text-center">
+            <CardTitle className="text-3xl font-bold mb-2">Create Account</CardTitle>
+            <CardDescription>
+              Join TCP Chat today
+              <span className="block text-xs mt-2">
+                Network Programming Demo - Watch server protocol messages →
+              </span>
+            </CardDescription>
+
+            {/* Connection Status - Desktop */}
+            <div className="mt-4 hidden lg:block">
+              <div className="flex items-center justify-center gap-2">
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+                  }`}
+                />
+                <span className="text-sm">
+                  {connected ? 'Connected to Server' : 'Disconnected'}
+                </span>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  type="text"
+                  id="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Choose a username"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your.email@example.com"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  type="password"
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Choose a strong password"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input
+                  type="password"
+                  id="confirmPassword"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm your password"
+                  required
+                />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={!connected}
+                className="w-full"
+              >
+                Create Account
+              </Button>
+            </form>
+          </CardContent>
+
+          <CardFooter className="flex justify-center">
+            <p className="text-sm text-muted-foreground">
+              Already have an account?{' '}
+              <Button
+                variant="link"
+                onClick={onSwitchToLogin}
+                className="p-0 h-auto font-medium"
+              >
+                Sign In
+              </Button>
+            </p>
+          </CardFooter>
+        </Card>
+      </div>
+
+      {/* Server Logs Panel - Desktop: Side Panel, Mobile: Collapsible Drawer */}
+      <div
+        className={`
+          ${showLogs ? 'block' : 'hidden'}
+          lg:block lg:w-[400px] lg:flex-shrink-0
+          fixed lg:relative bottom-0 left-0 right-0 lg:bottom-auto lg:left-auto lg:right-auto
+          h-[50vh] lg:h-screen
+          z-50 lg:z-auto
+          transition-transform duration-300
+          ${showLogs ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}
+        `}
+      >
+        <ServerLogsPanel />
       </div>
     </div>
   );
