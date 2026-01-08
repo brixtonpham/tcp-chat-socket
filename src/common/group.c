@@ -186,3 +186,23 @@ int get_group_members(int group_id, int *member_ids, int max_count) {
 
     return count;
 }
+
+/**
+ * Get list of groups for a user
+ *
+ * @param user_id User ID
+ * @param group_ids Output array for group IDs
+ * @param max_count Maximum number of groups to return
+ * @return Number of groups found
+ */
+int get_user_groups(int user_id, int *group_ids, int max_count) {
+    int count = 0;
+
+    for (int i = 0; i < g_group_member_count && count < max_count; i++) {
+        if (g_group_members[i].user_id == user_id && g_group_members[i].group_id > 0) {
+            group_ids[count++] = g_group_members[i].group_id;
+        }
+    }
+
+    return count;
+}

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat Client Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .status {
+            padding: 10px 20px;
+            background: #f0f0f0;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-indicator.connected {
+            background: #10b981;
+            box-shadow: 0 0 5px #10b981;
+        }
+
+        .status-indicator.disconnected {
+            background: #ef4444;
+        }
+
+        .content {
+            padding: 20px;
+        }
+
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+        }
+
+        .section h3 {
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .log {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 4px;
+            border-left: 3px solid transparent;
+        }
+
+        .log-entry.sent {
+            border-left-color: #3b82f6;
+        }
+
+        .log-entry.received {
+            border-left-color: #10b981;
+        }
+
+        .log-entry.error {
+            border-left-color: #ef4444;
+            color: #fca5a5;
+        }
+
+        .log-entry.info {
+            border-left-color: #f59e0b;
+            color: #fbbf24;
+        }
+
+        .timestamp {
+            color: #6b7280;
+            margin-right: 8px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .button-group button {
+            flex: 1;
+            min-width: 120px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>WebSocket Chat Test Client</h1>
+        </div>
+
+        <div class="status">
+            <div>
+                <span class="status-indicator" id="statusIndicator"></span>
+                <span id="statusText">Disconnected</span>
+            </div>
+            <div>
+                <button onclick="connect()">Connect</button>
+                <button onclick="disconnect()">Disconnect</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Connection Settings -->
+            <div class="section">
+                <h3>Connection Settings</h3>
+                <div class="form-group">
+                    <label>WebSocket URL:</label>
+                    <input type="text" id="wsUrl" value="ws://localhost:3000">
+                </div>
+            </div>
+
+            <!-- Authentication -->
+            <div class="section">
+                <h3>Authentication</h3>
+                <div class="form-group">
+                    <label>Username:</label>
+                    <input type="text" id="username" value="alice">
+                </div>
+                <div class="form-group">
+                    <label>Password:</label>
+                    <input type="password" id="password" value="pass123">
+                </div>
+                <div class="button-group">
+                    <button onclick="register()">Register</button>
+                    <button onclick="login()">Login</button>
+                    <button onclick="logout()">Logout</button>
+                </div>
+            </div>
+
+            <!-- Chat -->
+            <div class="section">
+                <h3>Chat</h3>
+                <div class="form-group">
+                    <label>Recipient ID:</label>
+                    <input type="number" id="recipientId" value="2">
+                </div>
+                <div class="form-group">
+                    <label>Message:</label>
+                    <input type="text" id="chatMessage" value="Hello!">
+                </div>
+                <button onclick="sendChat()">Send Chat</button>
+            </div>
+
+            <!-- Friends -->
+            <div class="section">
+                <h3>Friends</h3>
+                <div class="form-group">
+                    <label>Friend Username:</label>
+                    <input type="text" id="friendUsername" value="bob">
+                </div>
+                <div class="button-group">
+                    <button onclick="sendFriendRequest()">Send Request</button>
+                    <button onclick="acceptFriend()">Accept</button>
+                    <button onclick="rejectFriend()">Reject</button>
+                    <button onclick="getFriendList()">Get List</button>
+                </div>
+            </div>
+
+            <!-- Message Log -->
+            <div class="section">
+                <h3>Message Log</h3>
+                <div class="log" id="log"></div>
+                <button onclick="clearLog()" style="margin-top: 10px;">Clear Log</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+
+        function log(message, type = 'info') {
+            const logEl = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `<span class="timestamp">[${timestamp}]</span>${message}`;
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function updateStatus(connected) {
+            const indicator = document.getElementById('statusIndicator');
+            const text = document.getElementById('statusText');
+
+            if (connected) {
+                indicator.className = 'status-indicator connected';
+                text.textContent = 'Connected';
+            } else {
+                indicator.className = 'status-indicator disconnected';
+                text.textContent = 'Disconnected';
+            }
+        }
+
+        function connect() {
+            const url = document.getElementById('wsUrl').value;
+
+            if (ws) {
+                log('Already connected', 'error');
+                return;
+            }
+
+            log(`Connecting to ${url}...`, 'info');
+            ws = new WebSocket(url);
+
+            ws.onopen = () => {
+                log('Connected to WebSocket server', 'info');
+                updateStatus(true);
+            };
+
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                log(`Received: ${JSON.stringify(message, null, 2)}`, 'received');
+            };
+
+            ws.onerror = (error) => {
+                log(`WebSocket error: ${error}`, 'error');
+            };
+
+            ws.onclose = () => {
+                log('Disconnected from WebSocket server', 'info');
+                updateStatus(false);
+                ws = null;
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function sendMessage(message) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('Not connected to server', 'error');
+                return;
+            }
+
+            const json = JSON.stringify(message);
+            log(`Sending: ${JSON.stringify(message, null, 2)}`, 'sent');
+            ws.send(json);
+        }
+
+        function register() {
+            sendMessage({
+                type: 'MSG_REGISTER',
+                data: {
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value
+                }
+            });
+        }
+
+        function login() {
+            sendMessage({
+                type: 'MSG_LOGIN',
+                data: {
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value
+                }
+            });
+        }
+
+        function logout() {
+            sendMessage({
+                type: 'MSG_LOGOUT'
+            });
+        }
+
+        function sendChat() {
+            sendMessage({
+                type: 'MSG_CHAT_SEND',
+                data: {
+                    recipientId: parseInt(document.getElementById('recipientId').value),
+                    content: document.getElementById('chatMessage').value
+                }
+            });
+        }
+
+        function sendFriendRequest() {
+            sendMessage({
+                type: 'MSG_FRIEND_REQUEST',
+                data: {
+                    username: document.getElementById('friendUsername').value
+                }
+            });
+        }
+
+        function acceptFriend() {
+            sendMessage({
+                type: 'MSG_FRIEND_ACCEPT',
+                data: {
+                    username: document.getElementById('friendUsername').value
+                }
+            });
+        }
+
+        function rejectFriend() {
+            sendMessage({
+                type: 'MSG_FRIEND_REJECT',
+                data: {
+                    username: document.getElementById('friendUsername').value
+                }
+            });
+        }
+
+        function getFriendList() {
+            sendMessage({
+                type: 'MSG_FRIEND_LIST'
+            });
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // Initialize
+        updateStatus(false);
+        log('Test client ready. Click Connect to start.', 'info');
+    </script>
+</body>
+</html>

@@ -36,5 +36,6 @@ int is_group_admin(int group_id, int user_id);
 int add_group_member(int group_id, int user_id, const char *role);
 int remove_group_member(int group_id, int user_id);
 int get_group_members(int group_id, int *member_ids, int max_count);
+int get_user_groups(int user_id, int *group_ids, int max_count);
 
 #endif // GROUP_H
