@@ -58,6 +58,9 @@ int main(int argc, char *argv[]) {
     printf("  TCP Chat Server\n");
     printf("===========================================\n\n");
 
+    // Disable stdout buffering for logs
+    setbuf(stdout, NULL);
+
     // Initialize server
     if (server_init(&g_server, port) < 0) {
         fprintf(stderr, "Failed to initialize server\n");

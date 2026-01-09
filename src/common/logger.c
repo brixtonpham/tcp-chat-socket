@@ -68,4 +68,5 @@ void log_info(const char *message) {
 
     // Also print to stdout
     printf("[INFO] %s\n", message);
+    fflush(stdout);
 }
