@@ -170,3 +170,29 @@ int remove_friendship(int user_id, int friend_id) {
 
     return 0;
 }
+
+
+/**
+ * Get pending friend requests for a user (where they are the receiver)
+ *
+ * @param user_id User ID
+ * @param friend_ids Output array for sender IDs
+ * @param max_count Maximum number of requests to return
+ * @return Number of requests found
+ */
+int get_pending_friend_requests(int user_id, int *friend_ids, int max_count) {
+    int count = 0;
+
+    for (int i = 0; i < g_friendship_count && count < max_count; i++) {
+        if (strcmp(g_friendships[i].status, "pending") != 0) {
+            continue;
+        }
+
+        // We want requests where user_id is the recipient (friend_id)
+        if (g_friendships[i].friend_id == user_id) {
+            friend_ids[count++] = g_friendships[i].user_id;
+        }
+    }
+
+    return count;
+}

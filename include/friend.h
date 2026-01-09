@@ -27,5 +27,6 @@ int get_friends(int user_id, int *friend_ids, int max_count);
 int create_friendship(int user_id, int friend_id);
 int update_friendship_status(int user_id, int friend_id, const char *status);
 int remove_friendship(int user_id, int friend_id);
+int get_pending_friend_requests(int user_id, int *friend_ids, int max_count);
 
 #endif // FRIEND_H

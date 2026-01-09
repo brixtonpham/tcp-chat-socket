@@ -186,3 +186,46 @@ int get_group_members(int group_id, int *member_ids, int max_count) {
 
     return count;
 }
+
+/**
+ * Update group member role
+ *
+ * @return 0 on success, -1 on error
+ */
+int update_group_member_role(int group_id, int user_id, const char *role) {
+    for (int i = 0; i < g_group_member_count; i++) {
+        if (g_group_members[i].group_id == group_id &&
+            g_group_members[i].user_id == user_id) {
+            
+            strncpy(g_group_members[i].role, role, sizeof(g_group_members[i].role) - 1);
+            save_groups_to_file();
+            return 0;
+        }
+    }
+    return -1;
+}
+
+/**
+ * Get pending group invites for a user
+ *
+ * @param user_id User ID
+ * @param group_ids Output array for group IDs
+ * @param max_count Maximum number of groups to return
+ * @return Number of invites found
+ */
+int get_group_invites(int user_id, int *group_ids, int max_count) {
+    int count = 0;
+
+    for (int i = 0; i < g_group_member_count && count < max_count; i++) {
+        if (g_group_members[i].user_id == user_id &&
+            strcmp(g_group_members[i].role, "invited") == 0) {
+            
+            // Check if group still exists
+            if (get_group_by_id(g_group_members[i].group_id) != NULL) {
+                group_ids[count++] = g_group_members[i].group_id;
+            }
+        }
+    }
+
+    return count;
+}
